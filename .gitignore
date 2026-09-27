@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+# Never commit weights or dataset files: their licence forbids redistribution here.
+weights/*
+!weights/.gitkeep
+data/
+*.pth
+*.caffemodel
+.env
