@@ -10,7 +10,7 @@ import cv2
 import numpy as np
 
 from app.detection import _decode, detect
-from app.geometry import DIMENSION_LABELS, analyze_landmarks, band_key, star_score
+from app.geometry import DIMENSION_LABELS, analyze_landmarks, band_key, predict_stars
 
 logger = logging.getLogger(__name__)
 
@@ -59,9 +59,9 @@ class BeautyPredictor:
             face = crop_face(_decode(image_bytes), landmarks)
             return {"score": predict_score(self._model, face), "mode": "cnn"}
 
-        composite, dimensions = analyze_landmarks(landmarks)
+        _composite, dimensions = analyze_landmarks(landmarks)
         return {
-            "score": star_score(composite),
+            "score": predict_stars(landmarks),
             "mode": "geometry",
             "dimensions": [
                 {

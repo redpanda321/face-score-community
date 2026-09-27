@@ -33,11 +33,26 @@ What that means here:
    to (for example photos plus ratings you collected with consent), using the same `scripts/train.py`.
 5. Please cite the SCUT-FBP5500 paper if you use the dataset or its models.
 
-## Geometric baseline
+## Geometric baseline and the London Set (CC BY 4.0)
 
-With no weights configured the app falls back to a landmark-geometry scorer (`app/geometry.py`). Its
-calibration constants were fitted on AI-generated (StyleGAN2) faces that do not depict real people. That
-face set is heavily skewed toward one demographic, so treat the baseline as a rough demo, not a measurement.
+With no weights configured the app falls back to a landmark-geometry scorer (`app/geometry.py`).
+
+The mapping from geometry to a 1-5 score is a six-coefficient ridge regression fitted on the
+**Face Research Lab London Set**:
+
+> DeBruine, L., & Jones, B. (2021). *Face Research Lab London Set*. figshare.
+> https://doi.org/10.6084/m9.figshare.5047666.v5 — licensed CC BY 4.0
+> (https://creativecommons.org/licenses/by/4.0/). Modified: only summary statistics of the ratings were used.
+
+No London Set images or ratings are redistributed here; the repository contains only the fitted coefficients.
+Its participants consented to use "in lab-based and web-based studies … and to illustrate research", which is
+narrower than what the CC BY licence permits. If you deploy this commercially, get your own legal advice.
+
+Measured accuracy (nested leave-one-out on those same 102 faces): Pearson r ≈ 0.46 with mean human rating,
+and only about 0.15 within male faces. That is a modest statistical fit on a small, mostly-White, studio-lit
+sample, not a validated measurement. The unit-scale constants used to normalise the geometric measurements
+(`IDEAL`, `TOLERANCES` in `app/geometry.py`) were derived from AI-generated (StyleGAN2) faces that depict no
+real people; that set is skewed toward one demographic.
 
 ## Other components
 

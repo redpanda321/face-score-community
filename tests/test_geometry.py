@@ -76,19 +76,51 @@ def test_every_dimension_has_a_nonempty_explanation(symmetric_landmarks):
         assert dimension.explanation.strip()
 
 
-def test_star_score_is_centred_and_bounded():
-    from app.geometry import COMPOSITE_MEAN, star_score
+def _stars_with(monkeypatch, symmetric_landmarks, **overrides):
+    import app.geometry as scoring
 
-    assert star_score(COMPOSITE_MEAN) == 3.0
-    assert star_score(100.0) <= 5.0
-    assert star_score(0.0) >= 1.0
-    assert star_score(80.0) > star_score(60.0) > star_score(40.0) > star_score(20.0)
+    for key, mu in zip(scoring.DEVIATION_ORDER, scoring.RATING_MODEL["mu"]):
+        value = overrides.get(key, mu)
+        monkeypatch.setitem(scoring._DEVIATIONS, key, lambda _lm, v=value: v)
+    return scoring.predict_stars(symmetric_landmarks)
 
 
-def test_star_score_separates_faces_by_more_than_a_point():
-    from app.geometry import star_score
+def test_predict_stars_is_bounded_on_real_shaped_input(symmetric_landmarks, asymmetric_landmarks):
+    from app.geometry import predict_stars
 
-    assert star_score(85.0) - star_score(30.0) > 2.0
+    for landmarks in (symmetric_landmarks, asymmetric_landmarks):
+        assert 1.0 <= predict_stars(landmarks) <= 5.0
+
+
+def test_average_measurements_score_three(monkeypatch, symmetric_landmarks):
+    assert _stars_with(monkeypatch, symmetric_landmarks) == 3.0
+
+
+def test_learned_signs(monkeypatch, symmetric_landmarks):
+    """Signs come from the fit: contour/golden deviation hurts, placement deviation helps."""
+    import app.geometry as scoring
+
+    base = _stars_with(monkeypatch, symmetric_landmarks)
+    mu = dict(zip(scoring.DEVIATION_ORDER, scoring.RATING_MODEL["mu"]))
+    sd = dict(zip(scoring.DEVIATION_ORDER, scoring.RATING_MODEL["sd"]))
+    worse_contour = _stars_with(monkeypatch, symmetric_landmarks, contour=mu["contour"] + 2 * sd["contour"])
+    worse_golden = _stars_with(monkeypatch, symmetric_landmarks, golden_ratio=mu["golden_ratio"] + 2 * sd["golden_ratio"])
+    more_placement = _stars_with(monkeypatch, symmetric_landmarks, placement=mu["placement"] + 2 * sd["placement"])
+    assert worse_contour < base and worse_golden < base and more_placement > base
+
+
+def test_missing_measurement_is_neutral(monkeypatch, symmetric_landmarks):
+    assert _stars_with(monkeypatch, symmetric_landmarks, thirds=None) == 3.0
+
+
+def test_stars_spread_is_meaningful(monkeypatch, symmetric_landmarks):
+    import app.geometry as scoring
+
+    mu = dict(zip(scoring.DEVIATION_ORDER, scoring.RATING_MODEL["mu"]))
+    sd = dict(zip(scoring.DEVIATION_ORDER, scoring.RATING_MODEL["sd"]))
+    good = _stars_with(monkeypatch, symmetric_landmarks, contour=mu["contour"] - 2 * sd["contour"], golden_ratio=mu["golden_ratio"] - 2 * sd["golden_ratio"], placement=mu["placement"] + 2 * sd["placement"])
+    bad = _stars_with(monkeypatch, symmetric_landmarks, contour=mu["contour"] + 2 * sd["contour"], golden_ratio=mu["golden_ratio"] + 2 * sd["golden_ratio"], placement=mu["placement"] - 2 * sd["placement"])
+    assert good - bad > 1.5
 
 
 def test_align_removes_head_roll(symmetric_landmarks):

@@ -1,7 +1,7 @@
-"""Geometric baseline: facial-proportion scoring from MediaPipe Face Mesh landmarks.
+"""Geometric baseline: facial-proportion measurements from MediaPipe Face Mesh landmarks,
+mapped to a 1-5 score by a small model fitted on the Face Research Lab London Set (CC BY 4.0).
 
-Used when no trained SCUT-FBP5500-style CNN weights are configured. Pure functions
-only: every function takes a landmark array and returns a number.
+Used when no trained SCUT-FBP5500-style CNN weights are configured. Pure functions only.
 """
 
 from __future__ import annotations
@@ -181,20 +181,40 @@ IDEAL: dict[str, np.ndarray] = {
     "contour": np.array([0.8015, 0.1918]),
 }
 
-# Composite (0-100) statistics of the reference set, used to centre the 1-5 scale.
-COMPOSITE_MEAN = 55.9
-COMPOSITE_SD = 13.1
+# Ridge regression of mean human attractiveness rating on the six geometric
+# deviations, fitted on the Face Research Lab London Set (DeBruine & Jones, CC BY 4.0,
+# doi:10.6084/m9.figshare.5047666.v5; 102 faces, 2513 raters). Nested leave-one-out
+# Pearson r = 0.46 (the previous hand-weighted score scored r = 0.31 on the same faces).
+# Small, mostly-White, studio-lit sample: treat it as a modest statistical fit, not ground truth.
+# Signs are learned, not assumed: e.g. "placement" deviation correlates POSITIVELY with rating.
+DEVIATION_ORDER = ("symmetry", "thirds", "fifths", "golden_ratio", "contour", "placement")
+RATING_MODEL = {
+    "intercept": 3.01890561238423,
+    "coef": [-0.0007981747647600841, 0.03653576082769867, -0.044133811728517054,
+             -0.1289299792588408, -0.16384196394556533, 0.1993588425535537],
+    "mu": [0.025900468886169058, 0.05365430137670168, 0.05857010313540847,
+           0.05726108098212977, 0.0688754418385205, 0.05470348363342109],
+    "sd": [0.016899499812820077, 0.029530712880089672, 0.026757196896715078,
+           0.018830594593920825, 0.040888310769621204, 0.008930624310766948],
+    "pred_mean": 3.01890561238423,
+    "pred_sd": 0.3539038896710826,
+}
 STAR_SPREAD = 0.4
 
 
-def star_score(composite: float) -> float:
-    """Map the 0-100 composite onto a 1-5 scale centred on 3.0.
+def predict_stars(landmarks: Landmarks) -> float:
+    """Predict a 1-5 score: fitted rating, z-scored, then squashed through tanh.
 
-    A z-score against the reference population fed through tanh: typical faces
-    land near 3, outliers approach but never leave 1 and 5, and the middle of
-    the range keeps enough slope to tell faces apart.
+    Typical faces land near 3; outliers approach but never leave 1 and 5.
+    A degenerate measurement contributes nothing (treated as the training mean).
     """
-    z = (float(composite) - COMPOSITE_MEAN) / COMPOSITE_SD
+    aligned = align_landmarks(landmarks)
+    rating = RATING_MODEL["intercept"]
+    for key, coef, mu, sd in zip(DEVIATION_ORDER, RATING_MODEL["coef"], RATING_MODEL["mu"], RATING_MODEL["sd"]):
+        deviation = _DEVIATIONS[key](aligned)
+        if deviation is not None:
+            rating += coef * (deviation - mu) / sd
+    z = (rating - RATING_MODEL["pred_mean"]) / RATING_MODEL["pred_sd"]
     return round(float(3.0 + 2.0 * np.tanh(STAR_SPREAD * z)), 1)
 
 
@@ -236,6 +256,16 @@ def _dev_placement(landmarks: Landmarks) -> float | None:
     mouth_position = (float(landmarks[13, 1]) - float(landmarks[10, 1])) / height
     mouth_deviation = abs(mouth_position - 0.66)
     return (gap_deviation + mouth_deviation) / 2.0
+
+
+_DEVIATIONS = {
+    "symmetry": _dev_symmetry,
+    "thirds": _dev_thirds,
+    "fifths": _dev_fifths,
+    "golden_ratio": _dev_golden_ratio,
+    "contour": _dev_contour,
+    "placement": _dev_placement,
+}
 
 
 def _score_from(dev_fn, key: str, landmarks: Landmarks) -> float:

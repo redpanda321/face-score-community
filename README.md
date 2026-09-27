@@ -82,6 +82,9 @@ pip install -r requirements-dev.txt && pytest -q
 
 ### Limits
 
+- The geometric baseline was fitted on 102 faces (London Set, CC BY 4.0, see [NOTICE.md](NOTICE.md)) and
+  reaches Pearson r ≈ 0.46 with human ratings in nested cross-validation (≈ 0.15 within male faces). Treat
+  it as a rough demo. A CNN trained on a large rated dataset is expected to do far better.
 - Landmark geometry cannot see smile, skin, age or hair, which strongly affect human ratings; the
   baseline will not track them.
 - Photos should be frontal, well lit, one face. Large head turns hurt the baseline.
