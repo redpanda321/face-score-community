@@ -74,6 +74,19 @@ The script reports Pearson correlation, MAE and RMSE. It was smoke-tested on syn
 not been run on the real dataset, so no accuracy figure is claimed here. See the SCUT repository for
 the authors' reported benchmarks.
 
+### Compare scorers on the same data
+
+`scripts/evaluate.py` scores a rated image list (`<image> <score>` per line) and prints Pearson, Spearman,
+MAE and RMSE, so the geometric baseline and any CNN checkpoint are judged by one protocol:
+
+```bash
+python scripts/evaluate.py --data-root images/ --list ratings.txt                    # geometric baseline
+python scripts/evaluate.py --data-root images/ --list ratings.txt --weights w.pth    # CNN
+```
+
+Always evaluate on faces the scorer was not fitted on. Pearson is scale-free; MAE/RMSE are only meaningful
+when your ratings are on a 1-5 scale.
+
 ### Tests
 
 ```bash
