@@ -10,9 +10,11 @@ A free, self-hosted facial-beauty scoring API and web page on a **1–5 scale**,
 are scored in memory and never stored.
 
 > **Read this first.**
-> - **No model weights are included.** The SCUT-FBP5500 weights are distributed by their authors and are
->   limited to **non-commercial research use** (see [NOTICE.md](NOTICE.md)). Bring your own checkpoint, or
->   train one from the dataset with `scripts/train.py`.
+> - **Weights are not in the git repo.** A ResNet-18 trained on SCUT-FBP5500 with `scripts/train.py` is
+>   available as a [release asset](https://github.com/redpanda321/face-score-community/releases/tag/v0.2.0)
+>   (Pearson 0.869 on the SCUT test split through this app). It inherits the dataset's **non-commercial
+>   research-only** licence (see [NOTICE.md](NOTICE.md)): no paid products or services. Or bring your own
+>   checkpoint, or train one from the dataset with `scripts/train.py`.
 > - Without weights the app runs a **geometric baseline**. It is a rough demo, not a measurement, and the
 >   UI labels it as such.
 > - Scores model *average rater preference on a research dataset*. They are not a judgement of anyone's
@@ -122,8 +124,10 @@ pip install -r requirements-dev.txt && pytest -q
 无需账号、无支付、无遥测，上传的照片只在内存中处理，不会保存。
 
 > **请先阅读**
-> - **本仓库不包含任何模型权重。** SCUT-FBP5500 的数据与权重由原作者发布，**仅限非商业研究使用**
-> （见 [NOTICE.md](NOTICE.md)）。请自行准备权重，或用 `scripts/train.py` 基于数据集自行训练。
+> - **git 仓库本身不含权重。** 用 `scripts/train.py` 在 SCUT-FBP5500 上训练的 ResNet-18 已作为
+> [Release 附件](https://github.com/redpanda321/face-score-community/releases/tag/v0.2.0)提供
+> （在 SCUT 测试集上经本程序流程 Pearson 0.869）。它沿用数据集的**仅限非商业研究**许可
+> （见 [NOTICE.md](NOTICE.md)），不得用于收费产品或服务。也可自备权重，或用 `scripts/train.py` 自行训练。
 > - 未配置权重时，程序使用**几何比例基线**，仅作演示，界面会明确标注。
 > - 分数反映的是研究数据集中评分者的平均偏好，**不代表任何人的价值或吸引力**。请仅上传本人或已获同意者的照片，不要用于未成年人。
 
