@@ -33,6 +33,24 @@ What that means here:
    to (for example photos plus ratings you collected with consent), using the same `scripts/train.py`.
 5. Please cite the SCUT-FBP5500 paper if you use the dataset or its models.
 
+## Released weights: `resnet18_scut_fbp5500_noncommercial.pth`
+
+Published as a GitHub Release asset (not in git history). It is a ResNet-18 trained by this project's
+`scripts/train.py` on the SCUT-FBP5500 training split (3,300 images, official 60%/40% split, 20,000
+iterations, ImageNet-pretrained initialisation). Because it is derived from SCUT-FBP5500, it carries that
+dataset's terms:
+
+- **Non-commercial research use only.** Do not use it in a paid product or service, or to make decisions
+  about people.
+- Please cite the SCUT-FBP5500 paper (above) and this repository if you use it.
+- The weights are provided "as is". They model the average preferences of the dataset's 60 raters over
+  a set of frontal faces (Asian and Caucasian, male and female, ages 15-60). They do not generalise to
+  everyone and are not a measure of anyone's worth or attractiveness.
+- The authors of SCUT-FBP5500 have not reviewed or endorsed this release. If they object to it, it will be
+  removed.
+
+Verify a download with the SHA-256 in the release notes.
+
 ## Geometric baseline and the London Set (CC BY 4.0)
 
 With no weights configured the app falls back to a landmark-geometry scorer (`app/geometry.py`).
