@@ -69,17 +69,31 @@ def evaluate(model: nn.Module, loader: DataLoader, device: str) -> dict[str, flo
     }
 
 
+def _save(model: nn.Module, path: str, iteration: int) -> None:
+    os.makedirs(os.path.dirname(os.path.abspath(path)) or ".", exist_ok=True)
+    torch.save({"state_dict": model.state_dict(), "iteration": iteration}, path)
+
+
 def train(args: argparse.Namespace, device: str) -> None:
     model = resnet18(weights=ResNet18_Weights.IMAGENET1K_V1)
     model.fc = nn.Linear(model.fc.in_features, 1)
     model.to(device)
 
+    start_iteration = 0
+    if args.resume and os.path.isfile(args.resume):
+        checkpoint = torch.load(args.resume, map_location=device, weights_only=True)
+        model.load_state_dict(checkpoint["state_dict"])
+        start_iteration = checkpoint.get("iteration", 0)
+        print(f"resumed from {args.resume} at iteration {start_iteration}")
+
     loader = DataLoader(ListDataset(args.data_root, args.train_list, TRAIN_TF), batch_size=args.batch_size, shuffle=True, num_workers=args.workers, drop_last=True)
     optimiser = torch.optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, weight_decay=1e-4)
-    scheduler = torch.optim.lr_scheduler.StepLR(optimiser, step_size=args.lr_step, gamma=0.1)
+    for group in optimiser.param_groups:
+        group.setdefault("initial_lr", args.lr)
+    scheduler = torch.optim.lr_scheduler.StepLR(optimiser, step_size=args.lr_step, gamma=0.1, last_epoch=start_iteration - 1)
     criterion = nn.MSELoss()
 
-    iteration = 0
+    iteration = start_iteration
     model.train()
     while iteration < args.iterations:
         for images, targets in loader:
@@ -91,11 +105,13 @@ def train(args: argparse.Namespace, device: str) -> None:
             iteration += 1
             if iteration % 100 == 0:
                 print(f"iter {iteration}/{args.iterations} loss {loss.item():.4f}")
+            if args.save_every and iteration % args.save_every == 0:
+                _save(model, args.out, iteration)
+                print(f"checkpoint saved at iteration {iteration}")
             if iteration >= args.iterations:
                 break
 
-    os.makedirs(os.path.dirname(os.path.abspath(args.out)), exist_ok=True)
-    torch.save({"state_dict": model.state_dict()}, args.out)
+    _save(model, args.out, iteration)
     print(f"saved {args.out}")
 
 
@@ -112,6 +128,8 @@ def main() -> None:
     parser.add_argument("--lr", type=float, default=0.001)
     parser.add_argument("--batch-size", type=int, default=16)
     parser.add_argument("--workers", type=int, default=2)
+    parser.add_argument("--save-every", type=int, default=0, help="checkpoint to --out every N iterations, so a long run survives an interruption")
+    parser.add_argument("--resume", help="checkpoint to resume from (as saved by --save-every or a completed run)")
     args = parser.parse_args()
     device = "cuda" if torch.cuda.is_available() else "cpu"
 

@@ -27,8 +27,9 @@ are scored in memory and never stored.
 
 `app/model.py` loads plain checkpoints and SCUT-style ones (`state_dict` wrapper, `module.` prefix,
 `group1.*` / `group2.fullyconnected.*` key names). Loading is strict, so a mismatched file fails loudly.
-It was verified with a round-trip test, **not** against the real SCUT files, which are not downloadable
-without their Baidu Pan password.
+Checkpoints produced by `scripts/train.py` are loaded and scored end to end in the test above. The
+SCUT-style key-name remapping is verified only by a round-trip test, **not** against the authors' own
+weight files, which are not downloadable without their Baidu Pan password.
 
 ### Run
 
@@ -70,9 +71,20 @@ python scripts/train.py --data-root data/faces --train-list data/1/train_1.txt \
 python scripts/train.py --data-root data/faces --test-list data/1/test_1.txt --eval-only --weights weights/resnet18.pth
 ```
 
-The script reports Pearson correlation, MAE and RMSE. It was smoke-tested on synthetic data only; it has
-not been run on the real dataset, so no accuracy figure is claimed here. See the SCUT repository for
-the authors' reported benchmarks.
+The script reports Pearson correlation, MAE and RMSE, and can checkpoint (`--save-every`) and resume
+(`--resume`) long runs.
+
+**Measured result** (this repo's `scripts/train.py`, ImageNet-pretrained ResNet-18, official 60%/40% split,
+20,000 iterations, 2,200 held-out test faces, no train/test file overlap): Pearson **0.898**, MAE 0.233,
+RMSE 0.303 with the paper's protocol (whole image in). Through this app's real pipeline (detect the face,
+crop, score) it is Pearson **0.869**, MAE 0.280, RMSE 0.362. For reference, the SCUT authors report
+ResNet-18 at PC 0.851 / MAE 0.282 / RMSE 0.370 on the same split. Our run used ImageNet-pretrained weights
+and horizontal-flip augmentation, which may explain the gap; no ablation was run. The run was interrupted
+once and resumed from iteration 2000 (optimizer momentum was not restored). These numbers are for the SCUT
+test set only: performance on smiling, casually lit or non-frontal selfies is untested.
+
+Weights trained on SCUT-FBP5500 inherit its **non-commercial research** licence (see NOTICE.md), so they are
+not distributed in this repository.
 
 ### Compare scorers on the same data
 
@@ -128,8 +140,9 @@ uvicorn app.main:app --port 8000                                   # 几何基�
 
 ### 自行训练
 
-从原作者处获取数据集并遵守其条款后，运行 `scripts/train.py`（命令见上文英文部分）。脚本仅用合成数据做过冒烟测试，
-未在真实数据集上运行，因此本仓库不给出任何准确率数字，请参考 SCUT 官方仓库的基准结果。
+从原作者处获取数据集并遵守其条款后，运行 `scripts/train.py`（命令见上文英文部分），支持断点保存与续训。
+实测结果（官方 60%/40% 划分、2,200 张测试集）：论文同款整图输入 Pearson 0.898；经本程序完整流程（检测人脸→裁剪→打分）Pearson 0.869。
+仅在 SCUT 测试集上验证过，对笑脸、随手拍、非正脸的自拍效果未测试。用 SCUT 训练出的权重同样仅限非商业研究使用，因此不随仓库分发。
 
 ### 许可
 
